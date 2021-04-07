@@ -104,16 +104,14 @@ namespace SaugumasDarbas2
             {
                 if (textToDecrypt.Text != "" && textToDecrypt.Text != null)
                 {
-                    /*
+                    
                     string encryptedText = textToDecrypt.Text;
                     string decryptedData = SimpleDecrypt(encryptedText);
                     Console.WriteLine("Encrypted String: " + encryptedText);
                     Console.WriteLine("Decrypted String: " + decryptedData);
 
                     decryptedTextbox.Text = decryptedData;
-                    */
 
-                    
                 }
 
             }
@@ -224,6 +222,35 @@ namespace SaugumasDarbas2
 
             //get our original plainText back, write it to decryptFilePath FILE
             File.WriteAllBytes(decryptFilePath, bytesPlainTextData);
+
+            string decryptedData = Encoding.ASCII.GetString(bytesPlainTextData);
+            return decryptedData;
+        }
+
+
+
+        public string SimpleDecrypt(string encryptedText)
+        {
+            //we want to decrypt, therefore we need a csp and load our private key
+            RSACryptoServiceProvider csp = new RSACryptoServiceProvider();
+
+            string privKeyString;
+            {
+                privKeyString = File.ReadAllText(priKeyPath);
+                //get a stream from the string
+                var sr = new StringReader(privKeyString);
+                //we need a deserializer
+                var xs = new System.Xml.Serialization.XmlSerializer(typeof(RSAParameters));
+                //get the object back from the stream
+                RSAParameters privKey = (RSAParameters)xs.Deserialize(sr);
+                csp.ImportParameters(privKey);
+            }
+
+            //convert encryptedText to bytes array
+            byte[] bytesCipherText = Convert.FromBase64String(encryptedText);
+
+            //decrypt and strip pkcs#1.5 padding
+            byte[] bytesPlainTextData = csp.Decrypt(bytesCipherText, false);
 
             string decryptedData = Encoding.ASCII.GetString(bytesPlainTextData);
             return decryptedData;
