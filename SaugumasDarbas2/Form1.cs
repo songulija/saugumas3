@@ -74,7 +74,7 @@ namespace SaugumasDarbas2
         {
             try
             {
-                /*
+                
                 FileStream decryptFilePath = File.Open(DecryptRSAPath, FileMode.OpenOrCreate);
                 decryptFilePath.SetLength(0);
                 decryptFilePath.Close(); // This flushes the content, too.
@@ -192,7 +192,44 @@ namespace SaugumasDarbas2
 
             return encryptedText;
         }
-        
+
+        public string DecryptFile(string encryptFilePath, string decryptFilePath)
+        {
+            //we want to decrypt, therefore we need a csp and load our private key
+            RSACryptoServiceProvider csp = new RSACryptoServiceProvider();
+
+            string privKeyString;
+            {
+                privKeyString = File.ReadAllText(priKeyPath);
+                //get a stream from the string
+                var sr = new StringReader(privKeyString);
+                //we need a deserializer
+                var xs = new System.Xml.Serialization.XmlSerializer(typeof(RSAParameters));
+                //get the object back from the stream
+                RSAParameters privKey = (RSAParameters)xs.Deserialize(sr);
+                csp.ImportParameters(privKey);
+            }
+            //read data from encryptFilePath FILE
+            string encryptedText;
+            using (StreamReader reader = new StreamReader(encryptFilePath))
+            {
+                encryptedText = reader.ReadToEnd();
+                reader.Close();
+            }
+
+            byte[] bytesCipherText = Convert.FromBase64String(encryptedText);
+
+            //decrypt and strip pkcs#1.5 padding
+            byte[] bytesPlainTextData = csp.Decrypt(bytesCipherText, false);
+
+            //get our original plainText back, write it to decryptFilePath FILE
+            File.WriteAllBytes(decryptFilePath, bytesPlainTextData);
+
+            string decryptedData = Encoding.ASCII.GetString(bytesPlainTextData);
+            return decryptedData;
+        }
+
+
     }
 }
 
